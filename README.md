@@ -1,22 +1,3 @@
-# Inicializar repositorio y añadir archivo README.md
-git init
-echo "# Proyecto" >> README.md
-
-# Añadir archivos al repositorio
-git add .
-
-# Hacer commit
-git commit -m "Primer commit"
-
-# Crear rama main
-git branch -M main
-
-# Añadir repositorio remoto
-git remote add origin https://github.com/usuario/repositorio.git
-
-# Subir código
-git push -u origin main
-
 # Paso 1: Definición de vectores
 energia <- c(rep("Renovable", 10), rep("No Renovable", 10))  # Tipo de energía (Renovable y No Renovable)
 consumo <- c(20, 22, NA, 19, 25, 21, NA, 23, 18, 20, 15, 17, 20, 22, 24, 18, NA, 21, 19, 22, 23)  # Consumo diario (en kWh)
