@@ -1,55 +1,79 @@
-# Paso 1: Definición de vectores
-energia <- c(rep("Renovable", 10), rep("No Renovable", 10))  # Tipo de energía (Renovable y No Renovable)
-consumo <- c(20, 22, NA, 19, 25, 21, NA, 23, 18, 20, 15, 17, 20, 22, 24, 18, NA, 21, 19, 22, 23)  # Consumo diario (en kWh)
-costo_kwh <- c(rep(0.15, 10), rep(0.25, 10))  # Costo por kWh (diferente para renovable y no renovable)
+# Instalar las librerías si no están instaladas
+if(!require(dplyr)) install.packages("dplyr")
+if(!require(tidyr)) install.packages("tidyr")
 
-# Paso 2: Limpieza de datos (Reemplazo de NA por la mediana de consumo por tipo de energía)
-# Calcular la mediana de consumo por tipo de energía
-mediana_renovable <- median(consumo[energia == "Renovable"], na.rm = TRUE)
-mediana_no_renovable <- median(consumo[energia == "No Renovable"], na.rm = TRUE)
+# Cargar las librerías
+library(dplyr)
+library(tidyr)
 
-# Reemplazar los NA con la mediana correspondiente
-consumo[is.na(consumo) & energia == "Renovable"] <- mediana_renovable
-consumo[is.na(consumo) & energia == "No Renovable"] <- mediana_no_renovable
+# Cargar el dataset mtcars
+data(mtcars)
 
-# Paso 3: Crear el dataframe df_consumo
-df_consumo <- data.frame(
-  energia = energia,
-  consumo = consumo,
-  costo_kwh = costo_kwh
+# Convertir mtcars en un dataframe (aunque ya lo es por defecto)
+df <- as.data.frame(mtcars)
+
+# Imprimir el dataframe original
+print(df)
+# Seleccionar las columnas mpg, cyl, hp y gear, y filtrar por cyl > 4
+df_seleccionado <- df %>%
+  select(mpg, cyl, hp, gear) %>%
+  filter(cyl > 4)
+
+# Imprimir el dataframe después de la selección y el filtrado
+print(df_seleccionado)
+# Ordenar por hp de forma descendente y renombrar columnas
+df_ordenado <- df_seleccionado %>%
+  arrange(desc(hp)) %>%
+  rename(consumo = mpg, potencia = hp)
+
+# Imprimir el dataframe después de la ordenación y renombrado
+print(df_ordenado)
+# Crear la columna eficiencia y calcular el consumo medio y potencia máxima por cilindro
+df_agregado <- df_ordenado %>%
+  mutate(eficiencia = consumo / potencia) %>%
+  group_by(cyl) %>%
+  summarise(consumo_medio = mean(consumo, na.rm = TRUE),
+            potencia_maxima = max(potencia, na.rm = TRUE))
+
+# Imprimir el dataframe después de la creación de nuevas columnas y agregación
+print(df_agregado)
+# Crear el segundo dataframe con información sobre gear y tipo_transmision
+df_transmision <- data.frame(
+  gear = c(3, 4, 5),
+  tipo_transmision = c("Manual", "Automática", "Semiautomática")
 )
 
-# Paso 4: Cálculos
-# Crear la columna costo_total (consumo * costo por kWh)
-df_consumo$costo_total <- df_consumo$consumo * df_consumo$costo_kwh
+# Realizar el left_join para añadir la columna tipo_transmision
+df_unido <- left_join(df_ordenado, df_transmision, by = "gear")
 
-# Calcular el total de consumo y el costo total por cada tipo de energía
-total_consumo <- tapply(df_consumo$consumo, df_consumo$energia, sum)
-total_costo <- tapply(df_consumo$costo_total, df_consumo$energia, sum)
+# Imprimir el dataframe después de la unión
+print(df_unido)
+# Transformar a formato largo
+df_largo <- df_unido %>%
+  pivot_longer(cols = c(consumo, potencia, eficiencia), 
+               names_to = "medida", 
+               values_to = "valor")
 
-# Calcular la media del consumo diario para cada tipo de energía
-media_consumo <- tapply(df_consumo$consumo, df_consumo$energia, mean)
+# Imprimir el dataframe en formato largo
+print(df_largo)
 
-# Agregar una columna llamada ganancia (simular un aumento del 10% en el costo)
-df_consumo$ganancia <- df_consumo$costo_total * 1.1
+# Identificar duplicados y agrupar por las columnas clave (cyl, gear, tipo_transmision, medida)
+df_largo_agregado <- df_largo %>%
+  group_by(cyl, gear, tipo_transmision, medida) %>%
+  summarise(valor_media = mean(valor, na.rm = TRUE)) %>%
+  ungroup()
 
-# Paso 5: Resumen
-# Crear la lista resumen_energia
-resumen_energia <- list()
+# Transformar de nuevo a formato ancho
+df_ancho <- df_largo_agregado %>%
+  pivot_wider(names_from = medida, values_from = valor_media)
 
-# Ordenar el dataframe por costo_total de forma descendente
-df_consumo_ordenado <- df_consumo[order(-df_consumo$costo_total),]
-
-# Calcular el total de consumo y costo total por tipo de energía
-resumen_energia$total_consumo <- total_consumo
-resumen_energia$total_costo <- total_costo
-
-# Extraer las tres filas con el mayor costo_total del dataframe ordenado
-top_3_costos <- head(df_consumo_ordenado, 3)
-
-# Almacenar en la lista resumen_energia
-resumen_energia$df_ordenado <- df_consumo_ordenado
-resumen_energia$top_3_costos <- top_3_costos
-
-# Mostrar la lista resumen_energia
-print(resumen_energia)
+# Imprimir el dataframe en formato ancho
+print(df_ancho)
+# Ya hemos imprimido los resultados después de cada operación
+# Aquí puedes agregar más verificaciones si es necesario, como:
+# print(df_seleccionado)
+# print(df_ordenado)
+# print(df_agregado)
+# print(df_unido)
+# print(df_largo)
+# print(df_ancho)
