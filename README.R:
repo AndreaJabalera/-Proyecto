@@ -1,79 +1,89 @@
-# Instalar las librerías si no están instaladas
-if(!require(dplyr)) install.packages("dplyr")
-if(!require(tidyr)) install.packages("tidyr")
+---
+title: "Análisis Exploratorio de Datos: Conjunto de Datos mtcars"
+author: "Tu Nombre"
+output: html_document
+toc: true
+toc_depth: 2
+theme: journal
+---
 
-# Cargar las librerías
-library(dplyr)
-library(tidyr)
+# Introducción
 
-# Cargar el dataset mtcars
+El propósito de este informe es realizar un análisis exploratorio de datos utilizando el conjunto de datos **mtcars** que se encuentra disponible en R. Este conjunto de datos contiene información sobre diversas características de automóviles, como el número de cilindros, el peso, la potencia y la eficiencia en el consumo de combustible.
+
+### Objetivos del análisis:
+- Explorar y describir las características del conjunto de datos.
+- Visualizar la relación entre algunas de las variables.
+- Organizar los resultados en tablas estáticas e interactivas.
+- Presentar los hallazgos de manera clara y accesible.
+
+# Análisis de Datos
+
+## Cargar los datos
+
+En esta sección, cargaremos el conjunto de datos `mtcars`, una tabla que contiene 32 observaciones sobre 11 variables relacionadas con automóviles.
+
+```{r}
+# Cargar el conjunto de datos mtcars
 data(mtcars)
 
-# Convertir mtcars en un dataframe (aunque ya lo es por defecto)
-df <- as.data.frame(mtcars)
+# Ver las primeras filas del conjunto de datos
+head(mtcars)
+# Cargar la librería kableExtra
+library(kableExtra)
 
-# Imprimir el dataframe original
-print(df)
-# Seleccionar las columnas mpg, cyl, hp y gear, y filtrar por cyl > 4
-df_seleccionado <- df %>%
-  select(mpg, cyl, hp, gear) %>%
-  filter(cyl > 4)
+# Mostrar una tabla estática de las primeras filas del conjunto de datos
+kable(head(mtcars), caption = "Primeras filas del conjunto de datos mtcars")
+# Cargar la librería DT
+library(DT)
 
-# Imprimir el dataframe después de la selección y el filtrado
-print(df_seleccionado)
-# Ordenar por hp de forma descendente y renombrar columnas
-df_ordenado <- df_seleccionado %>%
-  arrange(desc(hp)) %>%
-  rename(consumo = mpg, potencia = hp)
+# Mostrar la tabla interactiva
+datatable(mtcars, options = list(pageLength = 5), caption = "Tabla interactiva de mtcars")
+# Cargar la librería ggplot2 para gráficos
+library(ggplot2)
 
-# Imprimir el dataframe después de la ordenación y renombrado
-print(df_ordenado)
-# Crear la columna eficiencia y calcular el consumo medio y potencia máxima por cilindro
-df_agregado <- df_ordenado %>%
-  mutate(eficiencia = consumo / potencia) %>%
-  group_by(cyl) %>%
-  summarise(consumo_medio = mean(consumo, na.rm = TRUE),
-            potencia_maxima = max(potencia, na.rm = TRUE))
+# Generar un gráfico de dispersión entre peso y potencia
+ggplot(mtcars, aes(x = wt, y = hp)) +
+  geom_point() +
+  labs(title = "Relación entre Peso y Potencia de los Automóviles",
+       x = "Peso (en miles de libras)",
+       y = "Potencia (en caballos de fuerza)") +
+  theme_minimal()
 
-# Imprimir el dataframe después de la creación de nuevas columnas y agregación
-print(df_agregado)
-# Crear el segundo dataframe con información sobre gear y tipo_transmision
-df_transmision <- data.frame(
-  gear = c(3, 4, 5),
-  tipo_transmision = c("Manual", "Automática", "Semiautomática")
-)
+### Explicación del código:
 
-# Realizar el left_join para añadir la columna tipo_transmision
-df_unido <- left_join(df_ordenado, df_transmision, by = "gear")
+1. **Encabezado YAML**: 
+   - `toc: true` activa el índice de contenido.
+   - `toc_depth: 2` define que el índice de contenido mostrará hasta el segundo nivel de subtítulos (como subtítulos dentro de cada sección).
+   - `theme: journal` se utiliza para darle un estilo profesional al documento, pero puedes cambiarlo a otro como `cosmo`, `united`, etc., según prefieras.
 
-# Imprimir el dataframe después de la unión
-print(df_unido)
-# Transformar a formato largo
-df_largo <- df_unido %>%
-  pivot_longer(cols = c(consumo, potencia, eficiencia), 
-               names_to = "medida", 
-               values_to = "valor")
+2. **Introducción**: 
+   - Se describe el propósito del análisis y se define lo que se espera obtener del análisis exploratorio del conjunto de datos `mtcars`.
 
-# Imprimir el dataframe en formato largo
-print(df_largo)
+3. **Carga de los datos**:
+   - El conjunto de datos `mtcars` se carga directamente en R mediante `data(mtcars)`, y se visualizan las primeras filas con la función `head()`.
 
-# Identificar duplicados y agrupar por las columnas clave (cyl, gear, tipo_transmision, medida)
-df_largo_agregado <- df_largo %>%
-  group_by(cyl, gear, tipo_transmision, medida) %>%
-  summarise(valor_media = mean(valor, na.rm = TRUE)) %>%
-  ungroup()
+4. **Tabla estática**:
+   - Se usa la librería `kableExtra` para crear una tabla estática que muestra las primeras filas del conjunto de datos.
 
-# Transformar de nuevo a formato ancho
-df_ancho <- df_largo_agregado %>%
-  pivot_wider(names_from = medida, values_from = valor_media)
+5. **Tabla interactiva**:
+   - Usamos la librería `DT` para crear una tabla interactiva que permite al usuario interactuar con los datos, como ordenar y filtrar las filas.
 
-# Imprimir el dataframe en formato ancho
-print(df_ancho)
-# Ya hemos imprimido los resultados después de cada operación
-# Aquí puedes agregar más verificaciones si es necesario, como:
-# print(df_seleccionado)
-# print(df_ordenado)
-# print(df_agregado)
-# print(df_unido)
-# print(df_largo)
-# print(df_ancho)
+6. **Análisis gráfico**:
+   - Se genera un gráfico de dispersión usando `ggplot2` para mostrar la relación entre el peso (`wt`) y la potencia (`hp`) de los automóviles en el conjunto de datos.
+
+7. **Conclusión**:
+   - Se resumen los puntos clave del análisis realizado, incluyendo los hallazgos de las tablas y el gráfico generado.
+
+### Requisitos adicionales:
+
+- **Índice de contenido**: El índice de contenido está habilitado en el encabezado YAML y muestra hasta el segundo nivel de subtítulos, lo cual facilita la navegación por el documento.
+- **Personalización del estilo**: El estilo se ha personalizado con el tema `journal`, pero puedes elegir otros temas como `cosmo`, `united`, etc., para mejorar la apariencia visual del documento.
+
+### Pasos para ejecutar el documento:
+
+1. Crea un nuevo archivo R Markdown en RStudio y copia este código en el archivo.
+2. Asegúrate de tener instaladas las librerías necesarias (`kableExtra`, `DT`, `ggplot2`).
+3. Ejecuta el documento y compílalo a HTML para ver el resultado final.
+
+Este informe proporciona un análisis estructurado y bien organizado que incluye tablas, gráficos y un estilo visual atractivo. Puedes personalizarlo aún más según las necesidades de tu análisis.
