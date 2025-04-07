@@ -1,89 +1,35 @@
----
-title: "Análisis Exploratorio de Datos: Conjunto de Datos mtcars"
-author: "Tu Nombre"
-output: html_document
-toc: true
-toc_depth: 2
-theme: journal
----
+# Lista de puntuaciones de los 5 estudiantes
+puntuaciones = [85, 92, 78, 88, 95]
 
-# Introducción
+# Función para calcular el promedio de puntuaciones
+def calcular_promedio_puntuaciones(puntuaciones):
+    total_puntuaciones = 0
+    for puntuacion in puntuaciones:
+        total_puntuaciones += puntuacion
+    promedio = total_puntuaciones / len(puntuaciones)
+    return promedio
 
-El propósito de este informe es realizar un análisis exploratorio de datos utilizando el conjunto de datos **mtcars** que se encuentra disponible en R. Este conjunto de datos contiene información sobre diversas características de automóviles, como el número de cilindros, el peso, la potencia y la eficiencia en el consumo de combustible.
+# Función para calcular la puntuación máxima
+def calcular_puntuacion_maxima(puntuaciones):
+    puntuacion_maxima = puntuaciones[0]
+    for puntuacion in puntuaciones:
+        if puntuacion > puntuacion_maxima:
+            puntuacion_maxima = puntuacion
+    return puntuacion_maxima
 
-### Objetivos del análisis:
-- Explorar y describir las características del conjunto de datos.
-- Visualizar la relación entre algunas de las variables.
-- Organizar los resultados en tablas estáticas e interactivas.
-- Presentar los hallazgos de manera clara y accesible.
+# Función para calcular el total de las puntuaciones
+def calcular_total_puntuaciones(puntuaciones):
+    total_puntuaciones = sum(puntuaciones)
+    return total_puntuaciones
 
-# Análisis de Datos
+# Imprimir los resultados
+promedio = calcular_promedio_puntuaciones(puntuaciones)
+puntuacion_maxima = calcular_puntuacion_maxima(puntuaciones)
+total_puntuaciones = calcular_total_puntuaciones(puntuaciones)
 
-## Cargar los datos
-
-En esta sección, cargaremos el conjunto de datos `mtcars`, una tabla que contiene 32 observaciones sobre 11 variables relacionadas con automóviles.
-
-```{r}
-# Cargar el conjunto de datos mtcars
-data(mtcars)
-
-# Ver las primeras filas del conjunto de datos
-head(mtcars)
-# Cargar la librería kableExtra
-library(kableExtra)
-
-# Mostrar una tabla estática de las primeras filas del conjunto de datos
-kable(head(mtcars), caption = "Primeras filas del conjunto de datos mtcars")
-# Cargar la librería DT
-library(DT)
-
-# Mostrar la tabla interactiva
-datatable(mtcars, options = list(pageLength = 5), caption = "Tabla interactiva de mtcars")
-# Cargar la librería ggplot2 para gráficos
-library(ggplot2)
-
-# Generar un gráfico de dispersión entre peso y potencia
-ggplot(mtcars, aes(x = wt, y = hp)) +
-  geom_point() +
-  labs(title = "Relación entre Peso y Potencia de los Automóviles",
-       x = "Peso (en miles de libras)",
-       y = "Potencia (en caballos de fuerza)") +
-  theme_minimal()
-
-### Explicación del código:
-
-1. **Encabezado YAML**: 
-   - `toc: true` activa el índice de contenido.
-   - `toc_depth: 2` define que el índice de contenido mostrará hasta el segundo nivel de subtítulos (como subtítulos dentro de cada sección).
-   - `theme: journal` se utiliza para darle un estilo profesional al documento, pero puedes cambiarlo a otro como `cosmo`, `united`, etc., según prefieras.
-
-2. **Introducción**: 
-   - Se describe el propósito del análisis y se define lo que se espera obtener del análisis exploratorio del conjunto de datos `mtcars`.
-
-3. **Carga de los datos**:
-   - El conjunto de datos `mtcars` se carga directamente en R mediante `data(mtcars)`, y se visualizan las primeras filas con la función `head()`.
-
-4. **Tabla estática**:
-   - Se usa la librería `kableExtra` para crear una tabla estática que muestra las primeras filas del conjunto de datos.
-
-5. **Tabla interactiva**:
-   - Usamos la librería `DT` para crear una tabla interactiva que permite al usuario interactuar con los datos, como ordenar y filtrar las filas.
-
-6. **Análisis gráfico**:
-   - Se genera un gráfico de dispersión usando `ggplot2` para mostrar la relación entre el peso (`wt`) y la potencia (`hp`) de los automóviles en el conjunto de datos.
-
-7. **Conclusión**:
-   - Se resumen los puntos clave del análisis realizado, incluyendo los hallazgos de las tablas y el gráfico generado.
-
-### Requisitos adicionales:
-
-- **Índice de contenido**: El índice de contenido está habilitado en el encabezado YAML y muestra hasta el segundo nivel de subtítulos, lo cual facilita la navegación por el documento.
-- **Personalización del estilo**: El estilo se ha personalizado con el tema `journal`, pero puedes elegir otros temas como `cosmo`, `united`, etc., para mejorar la apariencia visual del documento.
-
-### Pasos para ejecutar el documento:
-
-1. Crea un nuevo archivo R Markdown en RStudio y copia este código en el archivo.
-2. Asegúrate de tener instaladas las librerías necesarias (`kableExtra`, `DT`, `ggplot2`).
-3. Ejecuta el documento y compílalo a HTML para ver el resultado final.
-
-Este informe proporciona un análisis estructurado y bien organizado que incluye tablas, gráficos y un estilo visual atractivo. Puedes personalizarlo aún más según las necesidades de tu análisis.
+print("Promedio de puntuaciones:", promedio)
+print("Puntuación máxima:", puntuacion_maxima)
+print("Total de puntuaciones:", total_puntuaciones)
+Promedio de puntuaciones: 87.6
+Puntuación máxima: 95
+Total de puntuaciones: 438
