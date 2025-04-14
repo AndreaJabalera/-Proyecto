@@ -1,67 +1,46 @@
 # Cargar el dataset
-data("AirPassengers")
+data("nottem")
 
-# Verificar la clase y estructura de la serie temporal
-print(class(AirPassengers))   # Debe devolver "ts", que indica que es una serie temporal
-print(summary(AirPassengers)) # Resumen estadístico
-print(start(AirPassengers))   # Muestra el inicio de la serie
-print(end(AirPassengers))     # Muestra el final de la serie
-print(frequency(AirPassengers)) # Frecuencia de la serie (debería ser 12, mensual)
+# Inspeccionar la estructura del dataset
+print(class(nottem))    # Verifica si es una serie temporal (ts)
+print(summary(nottem))  # Resumen estadístico de la serie
+print(start(nottem))    # Ver inicio de la serie
+print(end(nottem))      # Ver fin de la serie
+print(frequency(nottem)) # Frecuencia de la serie (debe ser 12, mensual)
 # Graficar la serie temporal
-plot(AirPassengers, main = "Número de Pasajeros Internacionales de Aerolíneas (1949-1960)",
-     ylab = "Número de Pasajeros", xlab = "Año", col = "blue")
-
-# Estadísticas descriptivas
-mean_airpassengers <- mean(AirPassengers)
-sd_airpassengers <- sd(AirPassengers)
-
-cat("Media: ", mean_airpassengers, "\n")
-cat("Desviación Estándar: ", sd_airpassengers, "\n")
+plot(nottem, main = "Temperaturas Mensuales en Nottingham (1920-1939)",
+     xlab = "Año", ylab = "Temperatura", col = "blue")
 # Descomponer la serie temporal
-decomposed_data <- decompose(AirPassengers)
+decomposed_data <- decompose(nottem)
 
 # Visualizar los componentes
 plot(decomposed_data)
-
-# Componentes: 
-# decomposed_data$trend (tendencia)
-# decomposed_data$seasonal (estacionalidad)
-# decomposed_data$random (componente aleatorio)
 # Graficar ACF y PACF
-acf(AirPassengers, main = "ACF de la serie AirPassengers")
-pacf(AirPassengers, main = "PACF de la serie AirPassengers")
+acf(nottem, main = "ACF de la serie nottem")
+pacf(nottem, main = "PACF de la serie nottem")
 
-# Instalar el paquete tseries si no está instalado
+# Instalar y cargar el paquete tseries si no está instalado
 if (!require(tseries)) install.packages("tseries")
-
-# Prueba de Dickey-Fuller aumentada para estacionariedad
 library(tseries)
-adf_test <- adf.test(AirPassengers)
 
+# Prueba de Dickey-Fuller aumentada para verificar estacionariedad
+adf_test <- adf.test(nottem)
 cat("P-valor de la prueba de Dickey-Fuller: ", adf_test$p.value, "\n")
-
-# Si la serie no es estacionaria, se puede diferenciar la serie
+# Si la serie no es estacionaria, aplicar diferenciación
 if (adf_test$p.value > 0.05) {
-  AirPassengers_diff <- diff(AirPassengers)
+  nottem_diff <- diff(nottem)
+  
   # Graficar la serie diferenciada
-  plot(AirPassengers_diff, main = "Serie Temporal Diferenciada")
-  acf(AirPassengers_diff, main = "ACF de la serie diferenciada")
-  pacf(AirPassengers_diff, main = "PACF de la serie diferenciada")
+  plot(nottem_diff, main = "Serie Temporal Diferenciada de Temperaturas")
+  
+  # Verificar si la diferenciación ha hecho la serie estacionaria
+  acf(nottem_diff, main = "ACF de la serie diferenciada")
+  pacf(nottem_diff, main = "PACF de la serie diferenciada")
+  
+  # Realizar la prueba ADF nuevamente
+  adf_test_diff <- adf.test(nottem_diff)
+  cat("P-valor de la prueba de Dickey-Fuller para la serie diferenciada: ", adf_test_diff$p.value, "\n")
 }
-# Boxplot para detectar outliers
-boxplot(AirPassengers, main = "Boxplot de la serie AirPassengers", ylab = "Número de Pasajeros")
-
-# Para destacar los outliers en la serie temporal
-outliers <- AirPassengers[AirPassengers > quantile(AirPassengers, 0.75) + 1.5*IQR(AirPassengers) | 
-                          AirPassengers < quantile(AirPassengers, 0.25) - 1.5*IQR(AirPassengers)]
-points(time(outliers), outliers, col = "red", pch = 19)  # Marca los outliers en rojo
-# Cargar el dataset
-data("AirPassengers")
-# Graficar la serie temporal
-plot(AirPassengers, main = "Número de Pasajeros Internacionales de Aerolíneas (1949-1960)",
-     ylab = "Número de Pasajeros", xlab = "Año", col = "blue")
-# Estadísticas descriptivas
-mean_airpassengers <- mean(AirPassengers)
-sd_airpassengers <- sd(AirPassengers)
-cat("Media: ", mean_airpassengers, "\n")
-cat("Desviación Estándar: ", sd_airpassengers, "\n")
+# Boxplot para detectar valores atípicos
+boxplot(nottem, main = "Boxplot de Temperaturas Mensuales en Nottingham",
+        ylab = "Temperatura")
