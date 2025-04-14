@@ -1,83 +1,67 @@
 # Cargar el dataset
-mall_data <- read.csv("Mall_Customers.csv")
+data("AirPassengers")
 
-# Examinar las primeras filas
-head(mall_data)
-# Examinar dimensiones y estructura
-dim(mall_data)
-str(mall_data)
-summary(mall_data)
+# Verificar la clase y estructura de la serie temporal
+print(class(AirPassengers))   # Debe devolver "ts", que indica que es una serie temporal
+print(summary(AirPassengers)) # Resumen estadístico
+print(start(AirPassengers))   # Muestra el inicio de la serie
+print(end(AirPassengers))     # Muestra el final de la serie
+print(frequency(AirPassengers)) # Frecuencia de la serie (debería ser 12, mensual)
+# Graficar la serie temporal
+plot(AirPassengers, main = "Número de Pasajeros Internacionales de Aerolíneas (1949-1960)",
+     ylab = "Número de Pasajeros", xlab = "Año", col = "blue")
 
-# Renombrar las columnas para facilitar su manejo
-colnames(mall_data) <- c("CustomerID", "Genre", "Age", "AnnualIncome", "SpendingScore")
+# Estadísticas descriptivas
+mean_airpassengers <- mean(AirPassengers)
+sd_airpassengers <- sd(AirPassengers)
 
-# Convertir Genre en variable numérica: 1 para masculino, 0 para femenino
-mall_data$Genre <- ifelse(mall_data$Genre == "Male", 1, 0)
+cat("Media: ", mean_airpassengers, "\n")
+cat("Desviación Estándar: ", sd_airpassengers, "\n")
+# Descomponer la serie temporal
+decomposed_data <- decompose(AirPassengers)
 
-# Normalizar las variables numéricas clave
-mall_data_normalized <- mall_data
-mall_data_normalized$AnnualIncome <- scale(mall_data$AnnualIncome)
-mall_data_normalized$SpendingScore <- scale(mall_data$SpendingScore)
-library(ggplot2)
+# Visualizar los componentes
+plot(decomposed_data)
 
-# Histograma de la Edad
-ggplot(mall_data, aes(x = Age)) +
-  geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
-  labs(title = "Distribución de Edad", x = "Edad", y = "Frecuencia")
+# Componentes: 
+# decomposed_data$trend (tendencia)
+# decomposed_data$seasonal (estacionalidad)
+# decomposed_data$random (componente aleatorio)
+# Graficar ACF y PACF
+acf(AirPassengers, main = "ACF de la serie AirPassengers")
+pacf(AirPassengers, main = "PACF de la serie AirPassengers")
 
-# Diagrama de caja para la distribución de Ingresos Anuales
-ggplot(mall_data, aes(x = "", y = AnnualIncome)) +
-  geom_boxplot(fill = "lightgreen", color = "black") +
-  labs(title = "Distribución de Ingreso Anual", y = "Ingreso Anual")
-# Usamos la función k-means para diferentes valores de k (2 a 6)
-tot_withinss <- numeric(6)
-for (k in 2:6) {
-  kmeans_model <- kmeans(mall_data_normalized[, c("AnnualIncome", "SpendingScore")], centers = k)
-  tot_withinss[k-1] <- kmeans_model$tot.withinss
+# Instalar el paquete tseries si no está instalado
+if (!require(tseries)) install.packages("tseries")
+
+# Prueba de Dickey-Fuller aumentada para estacionariedad
+library(tseries)
+adf_test <- adf.test(AirPassengers)
+
+cat("P-valor de la prueba de Dickey-Fuller: ", adf_test$p.value, "\n")
+
+# Si la serie no es estacionaria, se puede diferenciar la serie
+if (adf_test$p.value > 0.05) {
+  AirPassengers_diff <- diff(AirPassengers)
+  # Graficar la serie diferenciada
+  plot(AirPassengers_diff, main = "Serie Temporal Diferenciada")
+  acf(AirPassengers_diff, main = "ACF de la serie diferenciada")
+  pacf(AirPassengers_diff, main = "PACF de la serie diferenciada")
 }
+# Boxplot para detectar outliers
+boxplot(AirPassengers, main = "Boxplot de la serie AirPassengers", ylab = "Número de Pasajeros")
 
-# Gráfico del codo
-plot(2:6, tot_withinss, type = "b", pch = 19, xlab = "Número de Clústeres", ylab = "Suma de Cuadrados Intra-clúster")
-# Entrenar el modelo K-Means con k = 5
-kmeans_model <- kmeans(mall_data_normalized[, c("AnnualIncome", "SpendingScore")], centers = 5)
-
-# Añadir los resultados de la segmentación al dataset
-mall_data$ClusterKMeans <- kmeans_model$cluster
-# Calcular la matriz de distancias
-dist_matrix <- dist(mall_data_normalized[, c("AnnualIncome", "SpendingScore")], method = "euclidean")
-
-# Aplicar clustering jerárquico con el método Ward
-hclust_model <- hclust(dist_matrix, method = "ward.D")
-
-# Graficar el dendrograma
-plot(hclust_model, main = "Dendrograma de Clustering Jerárquico")
-# Cortar el dendrograma en 5 clústeres
-hclust_clusters <- cutree(hclust_model, k = 5)
-
-# Añadir los resultados de la segmentación jerárquica al dataset
-mall_data$ClusterHierarchical <- hclust_clusters
-library(cluster)
-
-# Evaluación para K-Means
-silhouette_kmeans <- silhouette(kmeans_model$cluster, dist_matrix)
-
-# Evaluación para Clustering Jerárquico
-silhouette_hclust <- silhouette(hclust_clusters, dist_matrix)
-
-# Promedio de la silueta para ambos modelos
-mean(silhouette_kmeans[, 3])
-mean(silhouette_hclust[, 3])
-# Estadísticas descriptivas por clúster
-aggregate(cbind(AnnualIncome, SpendingScore) ~ ClusterKMeans, data = mall_data, FUN = mean)
-aggregate(cbind(AnnualIncome, SpendingScore) ~ ClusterHierarchical, data = mall_data, FUN = mean)
-# Visualizar los clústeres de K-Means
-ggplot(mall_data, aes(x = AnnualIncome, y = SpendingScore, color = factor(ClusterKMeans))) +
-  geom_point() +
-  labs(title = "Segmentación K-Means", color = "Clúster")
-
-# Visualizar los clústeres del Clustering Jerárquico
-ggplot(mall_data, aes(x = AnnualIncome, y = SpendingScore, color = factor(ClusterHierarchical))) +
-  geom_point() +
-  labs(title = "Segmentación Clustering Jerárquico", color = "Clúster")
-# Guardar en un archivo R
-saveRDS(mall_data, "Mall_Customers_Segmentation.Rds")
+# Para destacar los outliers en la serie temporal
+outliers <- AirPassengers[AirPassengers > quantile(AirPassengers, 0.75) + 1.5*IQR(AirPassengers) | 
+                          AirPassengers < quantile(AirPassengers, 0.25) - 1.5*IQR(AirPassengers)]
+points(time(outliers), outliers, col = "red", pch = 19)  # Marca los outliers en rojo
+# Cargar el dataset
+data("AirPassengers")
+# Graficar la serie temporal
+plot(AirPassengers, main = "Número de Pasajeros Internacionales de Aerolíneas (1949-1960)",
+     ylab = "Número de Pasajeros", xlab = "Año", col = "blue")
+# Estadísticas descriptivas
+mean_airpassengers <- mean(AirPassengers)
+sd_airpassengers <- sd(AirPassengers)
+cat("Media: ", mean_airpassengers, "\n")
+cat("Desviación Estándar: ", sd_airpassengers, "\n")
