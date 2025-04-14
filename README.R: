@@ -1,74 +1,39 @@
-# Importar librerías
 import pandas as pd
 import numpy as np
-# Cargar los datos desde los archivos CSV
-ventas = pd.read_csv('/workspace/ventas.csv')
-inventarios = pd.read_csv('/workspace/inventarios.csv')
-satisfaccion = pd.read_csv('/workspace/satisfaccion.csv')
 
-# Mostrar las primeras filas de cada DataFrame para verificar los datos
-print("Ventas:")
-print(ventas.head())
+# Cargar los archivos CSV
+eventos_df = pd.read_csv('/workspace/eventos.csv')
+aficionados_df = pd.read_csv('/workspace/aficionados.csv')
+promociones_df = pd.read_csv('/workspace/promociones.csv')
 
-print("\nInventarios:")
-print(inventarios.head())
-
-print("\nSatisfacción del cliente:")
-print(satisfaccion.head())
 # Eliminar filas con valores nulos
-ventas = ventas.dropna()
-inventarios = inventarios.dropna()
-satisfaccion = satisfaccion.dropna()
+eventos_df = eventos_df.dropna()
+aficionados_df = aficionados_df.dropna()
+promociones_df = promociones_df.dropna()
 
-# Verificar que no haya valores nulos en los DataFrames
-print("\nDatos de ventas sin valores nulos:")
-print(ventas.isnull().sum())
+# Combinar los DataFrames utilizando 'id_evento' como clave
+df_combinado = pd.merge(eventos_df, aficionados_df, on='id_evento', how='inner')
+df_combinado = pd.merge(df_combinado, promociones_df, on='id_evento', how='inner')
 
-print("\nDatos de inventarios sin valores nulos:")
-print(inventarios.isnull().sum())
+# ¿Cuál es el evento con mayor asistencia total?
+evento_mayor_asistencia = df_combinado.loc[df_combinado['asistentes_totales'].idxmax()]
+print(f"El evento con mayor asistencia total es: {evento_mayor_asistencia['nombre_evento']}")
 
-print("\nDatos de satisfacción sin valores nulos:")
-print(satisfaccion.isnull().sum())
-# Calcular el total de ventas por producto (Unidades * Precio Unitario)
-ventas['Total_Ventas'] = ventas['Unidades'] * ventas['Precio_unitario']
+# ¿Qué rango de edad asiste más frecuentemente a los eventos?
+bins = [0, 18, 30, 40, 50, np.inf]
+labels = ['0-18', '19-30', '31-40', '41-50', '50+']
+df_combinado['rango_edad'] = pd.cut(df_combinado['edad'], bins=bins, labels=labels)
+rango_edad_mas_frecuente = df_combinado['rango_edad'].value_counts().idxmax()
+print(f"El rango de edad más frecuente es: {rango_edad_mas_frecuente}")
 
-# Calcular ventas totales por tienda
-ventas_totales = ventas.groupby('Tienda')['Total_Ventas'].sum()
-print("\nVentas totales por tienda:")
-print(ventas_totales)
-# Calcular la rotación de inventarios por tienda
-inventarios['Rotacion_Inventario'] = inventarios['Ventas'] / inventarios['Inventario_Disponible']
+# ¿Qué medio publicitario ha generado mayor impacto en términos de asistencia?
+df_combinado['impacto_promocion'] = df_combinado['asistentes_totales'] / df_combinado['presupuesto_promocion']
+medio_mayor_impacto = df_combinado.groupby('medio_publicitario')['impacto_promocion'].mean().idxmax()
+print(f"El medio publicitario con mayor impacto es: {medio_mayor_impacto}")
 
-# Mostrar la rotación de inventarios
-print("\nRotación de inventarios por tienda:")
-print(inventarios[['Tienda', 'Rotacion_Inventario']])
-# Filtrar tiendas con inventarios críticos
-tiendas_criticas = inventarios[inventarios['Rotacion_Inventario'] < 0.1]
-print("\nTiendas con inventarios críticos:")
-print(tiendas_criticas)
-# Filtrar tiendas con satisfacción menor al 60%
-tiendas_baja_satisfaccion = satisfaccion[satisfaccion['Satisfaccion'] < 60]
-print("\nTiendas con satisfacción menor al 60%:")
-print(tiendas_baja_satisfaccion)
-# Convertir la columna 'Total_Ventas' a un array de Numpy
-ventas_totales_numpy = ventas['Total_Ventas'].to_numpy()
+# ¿Cuál es la ubicación de residencia que más aficionados aporta a los eventos?
+ubicacion_mas_frecuente = df_combinado['ubicacion_residencia'].value_counts().idxmax()
+print(f"La ubicación de residencia que más aficionados aporta es: {ubicacion_mas_frecuente}")
 
-# Calcular la mediana de las ventas totales
-mediana_ventas = np.median(ventas_totales_numpy)
-print("\nMediana de las ventas totales:", mediana_ventas)
-# Calcular la desviación estándar de las ventas totales
-desviacion_estandar_ventas = np.std(ventas_totales_numpy)
-print("\nDesviación estándar de las ventas totales:", desviacion_estandar_ventas)
-# Configurar una semilla para resultados reproducibles
-np.random.seed(42)
-
-# Generar simulaciones de ventas futuras (proyecciones)
-simulaciones_ventas_futuras = np.random.normal(loc=mediana_ventas, scale=desviacion_estandar_ventas, size=12)
-print("\nSimulaciones de ventas futuras para los próximos 12 meses:")
-print(simulaciones_ventas_futuras)
-# Resumen de resultados y recomendaciones
-print("\nResumen:")
-print("1. Las tiendas con inventarios críticos necesitan mejorar la rotación de inventarios.")
-print("2. Las tiendas con baja satisfacción del cliente (<60%) deben mejorar la experiencia de compra.")
-print("3. Las simulaciones de ventas futuras sugieren un crecimiento, pero es necesario controlar la variabilidad.")
-
+# Exportar el DataFrame final
+df_combinado.to_csv('/workspace/reporte_eventos.csv', index=False)
