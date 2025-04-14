@@ -1,84 +1,83 @@
-pip install pandas numpy matplotlib seaborn statsmodels
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import statsmodels.api as sm
-# Cargar los archivos CSV
-ventas_df = pd.read_csv('/workspace/ventas_peliculas.csv')
-promocion_df = pd.read_csv('/workspace/promocion_peliculas.csv')
+# Cargar el dataset
+mall_data <- read.csv("Mall_Customers.csv")
 
-# Mostrar las primeras filas de ambos DataFrames
-ventas_df.head(), promocion_df.head()
-# Combinar los DataFrames usando un left join
-df_combined = pd.merge(ventas_df, promocion_df, on=['fecha', 'titulo'], how='left', validate='1:m')
+# Examinar las primeras filas
+head(mall_data)
+# Examinar dimensiones y estructura
+dim(mall_data)
+str(mall_data)
+summary(mall_data)
 
-# Rellenar los valores nulos con ffill y bfill
-df_combined.fillna(method='ffill', inplace=True)
-df_combined.fillna(method='bfill', inplace=True)
+# Renombrar las columnas para facilitar su manejo
+colnames(mall_data) <- c("CustomerID", "Genre", "Age", "AnnualIncome", "SpendingScore")
 
-# Verificar la combinación y los valores nulos
-df_combined.isna().sum()
-# Identificar valores nulos
-df_combined.isna().sum()
-# Convertir la columna 'fecha' a datetime si no lo está
-df_combined['fecha'] = pd.to_datetime(df_combined['fecha'])
+# Convertir Genre en variable numérica: 1 para masculino, 0 para femenino
+mall_data$Genre <- ifelse(mall_data$Genre == "Male", 1, 0)
 
-# Graficar ventas semanales
-plt.figure(figsize=(10, 6))
-sns.lineplot(data=df_combined, x='fecha', y='ventas_boletos')
-plt.title('Ventas Semanales de Boletos')
-plt.xlabel('Semana')
-plt.ylabel('Ventas de Boletos')
-plt.xticks(rotation=45)
-plt.show()
-# Crear una columna que indique si hubo promoción
-df_combined['con_promocion'] = df_combined['eventos_promocionales'].apply(lambda x: 1 if x > 0 else 0)
+# Normalizar las variables numéricas clave
+mall_data_normalized <- mall_data
+mall_data_normalized$AnnualIncome <- scale(mall_data$AnnualIncome)
+mall_data_normalized$SpendingScore <- scale(mall_data$SpendingScore)
+library(ggplot2)
 
-# Graficar las ventas promedio con y sin promoción
-plt.figure(figsize=(10, 6))
-sns.barplot(x='con_promocion', y='ventas_boletos', data=df_combined, ci=None)
-plt.title('Ventas Promedio de Boletos: Con y Sin Promoción')
-plt.xlabel('Con Promoción (1 = Sí, 0 = No)')
-plt.ylabel('Ventas de Boletos Promedio')
-plt.show()
-# Box plot para detectar outliers en ventas de boletos
-plt.figure(figsize=(10, 6))
-sns.boxplot(data=df_combined, y='ventas_boletos')
-plt.title('Detección de Outliers en Ventas de Boletos')
-plt.ylabel('Ventas de Boletos')
-plt.show()
-# Calcular la correlación de Pearson
-correlation_matrix = df_combined[['ventas_boletos', 'calificacion', 'eventos_promocionales', 'participacion_promocion']].corr()
-print(correlation_matrix)
+# Histograma de la Edad
+ggplot(mall_data, aes(x = Age)) +
+  geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
+  labs(title = "Distribución de Edad", x = "Edad", y = "Frecuencia")
 
-# Graficar la matriz de correlación
-plt.figure(figsize=(10, 6))
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f')
-plt.title('Matriz de Correlación')
-plt.show()
-# Definir variables independientes y dependientes
-X = df_combined[['calificacion', 'eventos_promocionales', 'participacion_promocion']]
-y = df_combined['ventas_boletos']
+# Diagrama de caja para la distribución de Ingresos Anuales
+ggplot(mall_data, aes(x = "", y = AnnualIncome)) +
+  geom_boxplot(fill = "lightgreen", color = "black") +
+  labs(title = "Distribución de Ingreso Anual", y = "Ingreso Anual")
+# Usamos la función k-means para diferentes valores de k (2 a 6)
+tot_withinss <- numeric(6)
+for (k in 2:6) {
+  kmeans_model <- kmeans(mall_data_normalized[, c("AnnualIncome", "SpendingScore")], centers = k)
+  tot_withinss[k-1] <- kmeans_model$tot.withinss
+}
 
-# Añadir una constante para el término independiente en el modelo de regresión
-X = sm.add_constant(X)
+# Gráfico del codo
+plot(2:6, tot_withinss, type = "b", pch = 19, xlab = "Número de Clústeres", ylab = "Suma de Cuadrados Intra-clúster")
+# Entrenar el modelo K-Means con k = 5
+kmeans_model <- kmeans(mall_data_normalized[, c("AnnualIncome", "SpendingScore")], centers = 5)
 
-# Ajustar el modelo OLS
-model = sm.OLS(y, X).fit()
+# Añadir los resultados de la segmentación al dataset
+mall_data$ClusterKMeans <- kmeans_model$cluster
+# Calcular la matriz de distancias
+dist_matrix <- dist(mall_data_normalized[, c("AnnualIncome", "SpendingScore")], method = "euclidean")
 
-# Resumen del modelo
-print(model.summary())
-# Realizar predicciones
-y_pred = model.predict(X)
+# Aplicar clustering jerárquico con el método Ward
+hclust_model <- hclust(dist_matrix, method = "ward.D")
 
-# Graficar valores reales vs predichos
-plt.figure(figsize=(10, 6))
-plt.plot(df_combined['fecha'], y, label='Ventas Reales', color='blue')
-plt.plot(df_combined['fecha'], y_pred, label='Ventas Predichas', color='red', linestyle='--')
-plt.title('Comparación de Ventas Reales vs Predichas')
-plt.xlabel('Fecha')
-plt.ylabel('Ventas de Boletos')
-plt.legend()
-plt.xticks(rotation=45)
-plt.show()
+# Graficar el dendrograma
+plot(hclust_model, main = "Dendrograma de Clustering Jerárquico")
+# Cortar el dendrograma en 5 clústeres
+hclust_clusters <- cutree(hclust_model, k = 5)
+
+# Añadir los resultados de la segmentación jerárquica al dataset
+mall_data$ClusterHierarchical <- hclust_clusters
+library(cluster)
+
+# Evaluación para K-Means
+silhouette_kmeans <- silhouette(kmeans_model$cluster, dist_matrix)
+
+# Evaluación para Clustering Jerárquico
+silhouette_hclust <- silhouette(hclust_clusters, dist_matrix)
+
+# Promedio de la silueta para ambos modelos
+mean(silhouette_kmeans[, 3])
+mean(silhouette_hclust[, 3])
+# Estadísticas descriptivas por clúster
+aggregate(cbind(AnnualIncome, SpendingScore) ~ ClusterKMeans, data = mall_data, FUN = mean)
+aggregate(cbind(AnnualIncome, SpendingScore) ~ ClusterHierarchical, data = mall_data, FUN = mean)
+# Visualizar los clústeres de K-Means
+ggplot(mall_data, aes(x = AnnualIncome, y = SpendingScore, color = factor(ClusterKMeans))) +
+  geom_point() +
+  labs(title = "Segmentación K-Means", color = "Clúster")
+
+# Visualizar los clústeres del Clustering Jerárquico
+ggplot(mall_data, aes(x = AnnualIncome, y = SpendingScore, color = factor(ClusterHierarchical))) +
+  geom_point() +
+  labs(title = "Segmentación Clustering Jerárquico", color = "Clúster")
+# Guardar en un archivo R
+saveRDS(mall_data, "Mall_Customers_Segmentation.Rds")
