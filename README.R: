@@ -1,39 +1,84 @@
+pip install pandas numpy matplotlib seaborn statsmodels
 import pandas as pd
 import numpy as np
-
+import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.api as sm
 # Cargar los archivos CSV
-eventos_df = pd.read_csv('/workspace/eventos.csv')
-aficionados_df = pd.read_csv('/workspace/aficionados.csv')
-promociones_df = pd.read_csv('/workspace/promociones.csv')
+ventas_df = pd.read_csv('/workspace/ventas_peliculas.csv')
+promocion_df = pd.read_csv('/workspace/promocion_peliculas.csv')
 
-# Eliminar filas con valores nulos
-eventos_df = eventos_df.dropna()
-aficionados_df = aficionados_df.dropna()
-promociones_df = promociones_df.dropna()
+# Mostrar las primeras filas de ambos DataFrames
+ventas_df.head(), promocion_df.head()
+# Combinar los DataFrames usando un left join
+df_combined = pd.merge(ventas_df, promocion_df, on=['fecha', 'titulo'], how='left', validate='1:m')
 
-# Combinar los DataFrames utilizando 'id_evento' como clave
-df_combinado = pd.merge(eventos_df, aficionados_df, on='id_evento', how='inner')
-df_combinado = pd.merge(df_combinado, promociones_df, on='id_evento', how='inner')
+# Rellenar los valores nulos con ffill y bfill
+df_combined.fillna(method='ffill', inplace=True)
+df_combined.fillna(method='bfill', inplace=True)
 
-# ¿Cuál es el evento con mayor asistencia total?
-evento_mayor_asistencia = df_combinado.loc[df_combinado['asistentes_totales'].idxmax()]
-print(f"El evento con mayor asistencia total es: {evento_mayor_asistencia['nombre_evento']}")
+# Verificar la combinación y los valores nulos
+df_combined.isna().sum()
+# Identificar valores nulos
+df_combined.isna().sum()
+# Convertir la columna 'fecha' a datetime si no lo está
+df_combined['fecha'] = pd.to_datetime(df_combined['fecha'])
 
-# ¿Qué rango de edad asiste más frecuentemente a los eventos?
-bins = [0, 18, 30, 40, 50, np.inf]
-labels = ['0-18', '19-30', '31-40', '41-50', '50+']
-df_combinado['rango_edad'] = pd.cut(df_combinado['edad'], bins=bins, labels=labels)
-rango_edad_mas_frecuente = df_combinado['rango_edad'].value_counts().idxmax()
-print(f"El rango de edad más frecuente es: {rango_edad_mas_frecuente}")
+# Graficar ventas semanales
+plt.figure(figsize=(10, 6))
+sns.lineplot(data=df_combined, x='fecha', y='ventas_boletos')
+plt.title('Ventas Semanales de Boletos')
+plt.xlabel('Semana')
+plt.ylabel('Ventas de Boletos')
+plt.xticks(rotation=45)
+plt.show()
+# Crear una columna que indique si hubo promoción
+df_combined['con_promocion'] = df_combined['eventos_promocionales'].apply(lambda x: 1 if x > 0 else 0)
 
-# ¿Qué medio publicitario ha generado mayor impacto en términos de asistencia?
-df_combinado['impacto_promocion'] = df_combinado['asistentes_totales'] / df_combinado['presupuesto_promocion']
-medio_mayor_impacto = df_combinado.groupby('medio_publicitario')['impacto_promocion'].mean().idxmax()
-print(f"El medio publicitario con mayor impacto es: {medio_mayor_impacto}")
+# Graficar las ventas promedio con y sin promoción
+plt.figure(figsize=(10, 6))
+sns.barplot(x='con_promocion', y='ventas_boletos', data=df_combined, ci=None)
+plt.title('Ventas Promedio de Boletos: Con y Sin Promoción')
+plt.xlabel('Con Promoción (1 = Sí, 0 = No)')
+plt.ylabel('Ventas de Boletos Promedio')
+plt.show()
+# Box plot para detectar outliers en ventas de boletos
+plt.figure(figsize=(10, 6))
+sns.boxplot(data=df_combined, y='ventas_boletos')
+plt.title('Detección de Outliers en Ventas de Boletos')
+plt.ylabel('Ventas de Boletos')
+plt.show()
+# Calcular la correlación de Pearson
+correlation_matrix = df_combined[['ventas_boletos', 'calificacion', 'eventos_promocionales', 'participacion_promocion']].corr()
+print(correlation_matrix)
 
-# ¿Cuál es la ubicación de residencia que más aficionados aporta a los eventos?
-ubicacion_mas_frecuente = df_combinado['ubicacion_residencia'].value_counts().idxmax()
-print(f"La ubicación de residencia que más aficionados aporta es: {ubicacion_mas_frecuente}")
+# Graficar la matriz de correlación
+plt.figure(figsize=(10, 6))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f')
+plt.title('Matriz de Correlación')
+plt.show()
+# Definir variables independientes y dependientes
+X = df_combined[['calificacion', 'eventos_promocionales', 'participacion_promocion']]
+y = df_combined['ventas_boletos']
 
-# Exportar el DataFrame final
-df_combinado.to_csv('/workspace/reporte_eventos.csv', index=False)
+# Añadir una constante para el término independiente en el modelo de regresión
+X = sm.add_constant(X)
+
+# Ajustar el modelo OLS
+model = sm.OLS(y, X).fit()
+
+# Resumen del modelo
+print(model.summary())
+# Realizar predicciones
+y_pred = model.predict(X)
+
+# Graficar valores reales vs predichos
+plt.figure(figsize=(10, 6))
+plt.plot(df_combined['fecha'], y, label='Ventas Reales', color='blue')
+plt.plot(df_combined['fecha'], y_pred, label='Ventas Predichas', color='red', linestyle='--')
+plt.title('Comparación de Ventas Reales vs Predichas')
+plt.xlabel('Fecha')
+plt.ylabel('Ventas de Boletos')
+plt.legend()
+plt.xticks(rotation=45)
+plt.show()
