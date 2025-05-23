@@ -1,46 +1,108 @@
-# Cargar el dataset
-data("nottem")
+# Superstore Data Analysis with Plotly
 
-# Inspeccionar la estructura del dataset
-print(class(nottem))    # Verifica si es una serie temporal (ts)
-print(summary(nottem))  # Resumen estadístico de la serie
-print(start(nottem))    # Ver inicio de la serie
-print(end(nottem))      # Ver fin de la serie
-print(frequency(nottem)) # Frecuencia de la serie (debe ser 12, mensual)
-# Graficar la serie temporal
-plot(nottem, main = "Temperaturas Mensuales en Nottingham (1920-1939)",
-     xlab = "Año", ylab = "Temperatura", col = "blue")
-# Descomponer la serie temporal
-decomposed_data <- decompose(nottem)
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
-# Visualizar los componentes
-plot(decomposed_data)
-# Graficar ACF y PACF
-acf(nottem, main = "ACF de la serie nottem")
-pacf(nottem, main = "PACF de la serie nottem")
+# 1. Cargar el dataset
+df = pd.read_csv('superstore.csv', encoding='utf-8')
 
-# Instalar y cargar el paquete tseries si no está instalado
-if (!require(tseries)) install.packages("tseries")
-library(tseries)
+# 2. Convertir fechas
+df['Order Date'] = pd.to_datetime(df['Order Date'])
+df['Ship Date'] = pd.to_datetime(df['Ship Date'])
 
-# Prueba de Dickey-Fuller aumentada para verificar estacionariedad
-adf_test <- adf.test(nottem)
-cat("P-valor de la prueba de Dickey-Fuller: ", adf_test$p.value, "\n")
-# Si la serie no es estacionaria, aplicar diferenciación
-if (adf_test$p.value > 0.05) {
-  nottem_diff <- diff(nottem)
-  
-  # Graficar la serie diferenciada
-  plot(nottem_diff, main = "Serie Temporal Diferenciada de Temperaturas")
-  
-  # Verificar si la diferenciación ha hecho la serie estacionaria
-  acf(nottem_diff, main = "ACF de la serie diferenciada")
-  pacf(nottem_diff, main = "PACF de la serie diferenciada")
-  
-  # Realizar la prueba ADF nuevamente
-  adf_test_diff <- adf.test(nottem_diff)
-  cat("P-valor de la prueba de Dickey-Fuller para la serie diferenciada: ", adf_test_diff$p.value, "\n")
-}
-# Boxplot para detectar valores atípicos
-boxplot(nottem, main = "Boxplot de Temperaturas Mensuales en Nottingham",
-        ylab = "Temperatura")
+# 3. Crear columna YearMonth
+df['YearMonth'] = df['Order Date'].dt.to_period('M').astype(str)
+
+# Gráfica de barras: ventas totales por categoría
+fig1 = px.bar(
+    df.groupby('Category', as_index=False)['Sales'].sum(),
+    x='Category',
+    y='Sales',
+    title='Ventas totales por categoría',
+    text_auto=True
+)
+fig1.show()
+
+# Gráfico de líneas: evolución mensual de ventas
+monthly_sales = df.groupby('YearMonth', as_index=False)['Sales'].sum()
+fig2 = px.line(
+    monthly_sales,
+    x='YearMonth',
+    y='Sales',
+    title='Evolución de ventas por mes'
+)
+fig2.update_xaxes(type='category')
+fig2.show()
+
+# Gráfico de líneas con Plotly Go y media móvil
+monthly_sales['MA_3'] = monthly_sales['Sales'].rolling(window=3).mean()
+
+fig3 = go.Figure()
+fig3.add_trace(go.Scatter(
+    x=monthly_sales['YearMonth'],
+    y=monthly_sales['Sales'],
+    mode='lines',
+    name='Ventas'
+))
+fig3.add_trace(go.Scatter(
+    x=monthly_sales['YearMonth'],
+    y=monthly_sales['MA_3'],
+    mode='lines',
+    name='Media móvil (3)',
+    line=dict(color='red', dash='dash')
+))
+fig3.update_layout(
+    title='Evolución de ventas con media móvil',
+    xaxis_title='Mes',
+    yaxis_title='Ventas'
+)
+fig3.show()
+
+# Treemap: Región > Categoría > Subcategoría
+tree_data = df.groupby(['Region', 'Category', 'Sub-Category'], as_index=False)['Sales'].sum()
+fig4 = px.treemap(
+    tree_data,
+    path=['Region', 'Category', 'Sub-Category'],
+    values='Sales',
+    title='Treemap de ventas por Región, Categoría y Subcategoría'
+)
+fig4.show()
+
+# Scatter: Ventas vs Ganancia, coloreado por descuento
+fig5 = px.scatter(
+    df,
+    x='Sales',
+    y='Profit',
+    color='Discount',
+    title='Relación entre ventas y ganancias, coloreado por descuento',
+    labels={'Sales': 'Ventas', 'Profit': 'Ganancia', 'Discount': 'Descuento'},
+    hover_data=['Category', 'Sub-Category']
+)
+fig5.show()
+
+# Coroplético: Agrupación por país
+# En Superstore los países pueden estar en la columna 'Country' o ser exclusivamente 'United States'
+# En caso de ser solo USA, cambiaremos el nivel a estado y usaremos 'State'
+if 'Country' in df.columns:
+    country_sales = df.groupby('Country', as_index=False)['Sales'].sum()
+    fig6 = px.choropleth(
+        country_sales,
+        locations='Country',
+        locationmode='country names',
+        color='Sales',
+        title='Ventas totales por país',
+        color_continuous_scale='Blues'
+    )
+else:
+    state_sales = df.groupby('State', as_index=False)['Sales'].sum()
+    fig6 = px.choropleth(
+        state_sales,
+        locations='State',
+        locationmode='USA-states',
+        scope='usa',
+        color='Sales',
+        title='Ventas totales por estado',
+        color_continuous_scale='Blues'
+    )
+fig6.show()
