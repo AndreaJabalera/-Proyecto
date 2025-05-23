@@ -1,108 +1,92 @@
-# Superstore Data Analysis with Plotly
-
+!pip install folium pandas
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import folium
+from folium.plugins import HeatMap, MarkerCluster
+# Cargar el dataset
+df = pd.read_csv("fires_map.csv")
 
-# 1. Cargar el dataset
-df = pd.read_csv('superstore.csv', encoding='utf-8')
+# Mostrar los primeros registros
+df.head()
+m1 = folium.Map(location=[df.latitude.mean(), df.longitude.mean()], zoom_start=6)
 
-# 2. Convertir fechas
-df['Order Date'] = pd.to_datetime(df['Order Date'])
-df['Ship Date'] = pd.to_datetime(df['Ship Date'])
+heat_data = df[['latitude', 'longitude']].values.tolist()
 
-# 3. Crear columna YearMonth
-df['YearMonth'] = df['Order Date'].dt.to_period('M').astype(str)
+HeatMap(heat_data).add_to(m1)
 
-# Gráfica de barras: ventas totales por categoría
-fig1 = px.bar(
-    df.groupby('Category', as_index=False)['Sales'].sum(),
-    x='Category',
-    y='Sales',
-    title='Ventas totales por categoría',
-    text_auto=True
-)
-fig1.show()
+m1
+m2 = folium.Map(location=[df.latitude.mean(), df.longitude.mean()], zoom_start=6)
 
-# Gráfico de líneas: evolución mensual de ventas
-monthly_sales = df.groupby('YearMonth', as_index=False)['Sales'].sum()
-fig2 = px.line(
-    monthly_sales,
-    x='YearMonth',
-    y='Sales',
-    title='Evolución de ventas por mes'
-)
-fig2.update_xaxes(type='category')
-fig2.show()
+for i, row in df.iterrows():
+    if row['brightness'] < 330:
+        color = 'yellow'
+    elif row['brightness'] < 380:
+        color = 'orange'
+    else:
+        color = 'red'
 
-# Gráfico de líneas con Plotly Go y media móvil
-monthly_sales['MA_3'] = monthly_sales['Sales'].rolling(window=3).mean()
+    folium.Marker(
+        location=[row['latitude'], row['longitude']],
+        popup=f"Brillo: {row['brightness']}",
+        icon=folium.Icon(color=color, icon='fire', prefix='fa')
+    ).add_to(m2)
 
-fig3 = go.Figure()
-fig3.add_trace(go.Scatter(
-    x=monthly_sales['YearMonth'],
-    y=monthly_sales['Sales'],
-    mode='lines',
-    name='Ventas'
-))
-fig3.add_trace(go.Scatter(
-    x=monthly_sales['YearMonth'],
-    y=monthly_sales['MA_3'],
-    mode='lines',
-    name='Media móvil (3)',
-    line=dict(color='red', dash='dash')
-))
-fig3.update_layout(
-    title='Evolución de ventas con media móvil',
-    xaxis_title='Mes',
-    yaxis_title='Ventas'
-)
-fig3.show()
+m2
+m3 = folium.Map(location=[df.latitude.mean(), df.longitude.mean()], zoom_start=6)
+marker_cluster = MarkerCluster().add_to(m3)
 
-# Treemap: Región > Categoría > Subcategoría
-tree_data = df.groupby(['Region', 'Category', 'Sub-Category'], as_index=False)['Sales'].sum()
-fig4 = px.treemap(
-    tree_data,
-    path=['Region', 'Category', 'Sub-Category'],
-    values='Sales',
-    title='Treemap de ventas por Región, Categoría y Subcategoría'
-)
-fig4.show()
+for i, row in df.iterrows():
+    folium.Marker(
+        location=[row['latitude'], row['longitude']],
+        popup=f"Brillo: {row['brightness']}"
+    ).add_to(marker_cluster)
 
-# Scatter: Ventas vs Ganancia, coloreado por descuento
-fig5 = px.scatter(
-    df,
-    x='Sales',
-    y='Profit',
-    color='Discount',
-    title='Relación entre ventas y ganancias, coloreado por descuento',
-    labels={'Sales': 'Ventas', 'Profit': 'Ganancia', 'Discount': 'Descuento'},
-    hover_data=['Category', 'Sub-Category']
-)
-fig5.show()
+m3
+m4 = folium.Map(location=[df.latitude.mean(), df.longitude.mean()], zoom_start=6)
 
-# Coroplético: Agrupación por país
-# En Superstore los países pueden estar en la columna 'Country' o ser exclusivamente 'United States'
-# En caso de ser solo USA, cambiaremos el nivel a estado y usaremos 'State'
-if 'Country' in df.columns:
-    country_sales = df.groupby('Country', as_index=False)['Sales'].sum()
-    fig6 = px.choropleth(
-        country_sales,
-        locations='Country',
-        locationmode='country names',
-        color='Sales',
-        title='Ventas totales por país',
-        color_continuous_scale='Blues'
-    )
-else:
-    state_sales = df.groupby('State', as_index=False)['Sales'].sum()
-    fig6 = px.choropleth(
-        state_sales,
-        locations='State',
-        locationmode='USA-states',
-        scope='usa',
-        color='Sales',
-        title='Ventas totales por estado',
-        color_continuous_scale='Blues'
-    )
-fig6.show()
+fg_aqua = folium.FeatureGroup(name="Aqua").add_to(m4)
+fg_terra = folium.FeatureGroup(name="Terra").add_to(m4)
+
+for i, row in df.iterrows():
+    fg = fg_aqua if row['satellite'] == 'Aqua' else fg_terra
+    folium.CircleMarker(
+        location=[row['latitude'], row['longitude']],
+        radius=3,
+        color='blue' if row['satellite'] == 'Aqua' else 'green',
+        fill=True,
+        fill_opacity=0.6
+    ).add_to(fg)
+
+folium.LayerControl().add_to(m4)
+m4
+m5 = folium.Map(location=[df.latitude.mean(), df.longitude.mean()], zoom_start=6)
+
+fg_yellow = folium.FeatureGroup(name="Brillo Bajo (amarillo)").add_to(m5)
+fg_orange = folium.FeatureGroup(name="Brillo Medio (naranja)").add_to(m5)
+fg_red = folium.FeatureGroup(name="Brillo Alto (rojo)").add_to(m5)
+
+for i, row in df.iterrows():
+    if row['brightness'] < 330:
+        fg = fg_yellow
+        color = 'yellow'
+    elif row['brightness'] < 380:
+        fg = fg_orange
+        color = 'orange'
+    else:
+        fg = fg_red
+        color = 'red'
+    
+    folium.CircleMarker(
+        location=[row['latitude'], row['longitude']],
+        radius=3,
+        color=color,
+        fill=True,
+        fill_opacity=0.6
+    ).add_to(fg)
+
+folium.LayerControl().add_to(m5)
+m5
+m1.save("heatmap.html")
+m2.save("markers.html")
+m3.save("cluster.html")
+m4.save("satellite_layer.html")
+m5.save("brightness_layer.html")
